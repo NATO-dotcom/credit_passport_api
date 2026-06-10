@@ -1,0 +1,19 @@
+# Security - NEVER commit these!
+.env
+.env.*
+
+# Python Virtual Environments
+venv/
+env/
+.venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE / OS specific files
+.vscode/
+.idea/
+.DS_Store
+*.swp
