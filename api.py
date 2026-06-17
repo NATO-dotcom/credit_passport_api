@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 import os
 from typing import List
 import statistics
-from db import passport_db
+from db import get_db_connection
 
 router = APIRouter()
 
@@ -92,12 +92,20 @@ async def sign_transactions(transactions: List[Transaction]):
         
         signature = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         
-        # Save to our central db file
-        passport_db[verification_id] = signature
+        conn = get_db_connection()
+        cursor = conn.cursor()
         
-        # Update this to your active Fedora IP!
-        local_ip = "192.168.122.84" 
-        verify_url = f"http://{local_ip}:8000/check/{verification_id}"
+        
+        cursor.execute(
+            "INSERT INTO verified_passports (verification_id, jwt_signature) VALUES (%s, %s)",
+            (verification_id, signature)
+        )
+        
+        conn.commit()
+        cursor.close()
+        conn.close()# Use your official cloud domain for the verification URL
+        
+        verify_url = f"https://credit-passport-api-1.onrender.com/check/{verification_id}"
         
         return SignedScoreResponse(
             status="success",

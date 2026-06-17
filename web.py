@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 import jwt
 import os
-from db import passport_db
+from db import get_db_connection
 
 router = APIRouter()
 
@@ -12,9 +12,21 @@ ALGORITHM = os.getenv("ALGORITHM", "HS256")
 
 @router.get("/check/{verification_id}", response_class=HTMLResponse)
 async def verify_passport(verification_id: str):
-    token = passport_db.get(verification_id)
+    # Open the vault and search for the ID
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-    if not token:
+    cursor.execute(
+        "SELECT jwt_signature FROM verified_passports WHERE verification_id = %s", 
+        (verification_id,)
+    )
+    result = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    # If the database returns nothing, the ID is fake or doesn't exist
+    if not result:
         return """
         <html><body style="font-family: sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: red;">Error: Document Not Found</h1>
@@ -22,6 +34,8 @@ async def verify_passport(verification_id: str):
         </body></html>
         """
         
+    # If we found it, pull the token out of the SQL result tuple
+    token = result[0]
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         
